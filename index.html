@@ -1,0 +1,151 @@
+<html>
+<head>
+<script>
+</script>
+<script src="https://code.jquery.com/jquery-2.2.4.min.js" crossorigin="anonymous"></script>
+<style>
+body
+{
+	font-family:Arial;;
+}
+input[readonly]
+{
+	border:none;
+}
+.message,
+.results 
+{
+	display:none;
+}
+.message
+{
+	color:red;
+}
+table input,td
+{
+	text-align:center;
+}
+table input[data-distance] 
+{
+	text-align:right
+}
+h4 
+{
+ font-weight:normal
+}
+input::placeholder
+{
+  color:#bbb;
+}
+</style>
+<head>
+<body>
+<h1>This form searches for crosspoint of two rays in spherical coordinate system. </h1>
+<h4>
+Please put geolocations of two initial points and their rays azimuthes. 
+<br>
+If initial point is located exactly on one of poles then its azimuth is assigned as desired longitude direction. The actual longitude does not matter in the case.
+<br>
+Generally there are two crosspoints in the sphere, but the one with the shortest combined travel distance from both initial points is chosen.
+<br>
+In case if the crosspoints are equally spaced then the one with the shortest travel distance form the 1<sup>st</sup> point is chosen. 
+</h4>
+<h3>Input:</h3>
+<table>
+<tr>
+<th>Point #</th>
+<th>Latitude</th>
+<th>Longitude</th>
+<th>Azimuth</th>
+</tr>
+<tr>
+<td>1</td>
+<td><input val="" placeholder="-90 .. +90" data-point="1" data-input data-type="lat"></td>
+<td><input val="" placeholder="-360 .. +360" data-point="1" data-input data-type="lng"></td>
+<td><input val="" placeholder="-360 .. +360" data-point="1" data-input data-type="azimuth"></td>
+</tr>
+<tr>
+<td>2</td>
+<td><input val="" placeholder="-90 .. +90" data-point="2" data-input data-type="lat"></td>
+<td><input val="" placeholder="-360 .. +360" data-point="2" data-input data-type="lng"></td>
+<td><input val="" placeholder="-360 .. +360" data-point="2" data-input data-type="azimuth"></td>
+</tr>
+</table>
+<div class="results">
+<h3>Results:</h3>
+<h4>Crosspoint:</h4>
+<table>
+<tr>
+<th>Latitude</th>
+<th>Longitude</th>
+</tr>
+<tr>
+<td><input val="" readonly data-crosspoint data-type="lat"></td>
+<td><input val="" readonly data-crosspoint data-type="lng"></td>
+</tr>
+</table>
+<h4>Distance from initial points to the crosspoint:</h4>
+<table>
+<tr>
+<th>Point #</th>
+<th>Distance, degrees</th>
+<th>Axis Latitude</th>
+<th>Axis Longitude</th>
+</tr>
+<tr>
+<td>1</td>
+<td><input val="" readonly data-point="1" data-distance data-type="distance"></td>
+<td><input val="" readonly data-point="1" data-distance data-type="lat"></td>
+<td><input val="" readonly data-point="1" data-distance data-type="lng"></td>
+</tr>
+<tr>
+<td>2</td>
+<td><input val="" readonly data-point="2" data-distance data-type="distance"></td>
+<td><input val="" readonly data-point="2" data-distance data-type="lat"></td>
+<td><input val="" readonly data-point="2" data-distance data-type="lng"></td>
+</tr>
+</table>
+</div>
+<h3 class="message" color="red"></h3>
+</body>
+<script>
+	function refresh() {
+		var p1=[$('[data-point="1"][data-input][data-type="lat"]').val(),$('[data-point="1"][data-input][data-type="lng"]').val()]
+		var a1=$('[data-point="1"][data-input][data-type="azimuth"]').val()
+		var p2=[$('[data-point="2"][data-input][data-type="lat"]').val(),$('[data-point="2"][data-input][data-type="lng"]').val()]
+		var a2=$('[data-point="2"][data-input][data-type="azimuth"]').val()
+		if (
+			isNaN((a1=parseFloat(a1))) || a1<-360 || a1 > 360 ||
+			isNaN((a2=parseFloat(a2))) || a2<-360 || a2 > 360 ||
+			isNaN((p1[1]=parseFloat(p1[1]))) || p1[1]<-360 || p1[1] > 360 || 
+			isNaN((p2[1]=parseFloat(p2[1]))) || p2[1]<-360 || p1[1] > 360 ||
+			isNaN((p1[0]=parseFloat(p1[0]))) || p1[0]<-90 || p1[0] > 90 ||
+			isNaN((p2[0]=parseFloat(p2[0]))) || p2[0]<-90 || p2[0] > 90
+		) {
+			$('.results').css({display:'none'})
+			$('.message').css({display:'block'}).html('INCOMPLETE OR INCORRECT INPUT DATA')
+		} else {
+			var result=Geo.sphericalTwoGreateCirclesClosestIntersectionPointCoordinates(p1,a1,p2,a2,true)
+			if (result===false) {
+				$('.results').css({display:'none'})
+				$('.message').css({display:'block'}).html('TWO INITIAL POINTS ARE ON ONE AND THE SAME GREAT CIRCLE (ROUTE)')
+			} else {
+				$('.results').css({display:'block'})
+				$('.message').css({display:'none'}).html('')
+				$('[data-crosspoint][data-type="lat"]').val(result[0][0].toFixed(6))
+				$('[data-crosspoint][data-type="lng"]').val(result[0][1].toFixed(6))
+				$('[data-point="1"][data-distance][data-type="distance"]').val(result[1][0].toFixed(6))
+				$('[data-point="2"][data-distance][data-type="distance"]').val(result[2][0].toFixed(6))
+				$('[data-point="1"][data-distance][data-type="lat"]').val(result[1][1][0].toFixed(6))
+				$('[data-point="2"][data-distance][data-type="lat"]').val(result[2][1][0].toFixed(6))
+				$('[data-point="1"][data-distance][data-type="lng"]').val(result[1][1][1].toFixed(6))
+				$('[data-point="2"][data-distance][data-type="lng"]').val(result[2][1][1].toFixed(6))
+			}
+		}
+	}
+	$('input:not([readonly])').change(refresh)
+	$(window).on('keyup',refresh)
+	$(window).on('paste',refresh)
+	refresh()
+</script>
+</html>
