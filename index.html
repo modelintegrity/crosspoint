@@ -2,7 +2,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<script>
+<script >
 
 
 
@@ -317,13 +317,14 @@ var Geo=(function() {
 			var D1,D2
 			if (R===true) {
 				R=[90,0]
-				D1=D2=undefined
+				D1=[90-p1[0][0],NaN]
+				D2=[90-p2[0][0],NaN]
 			} else if (R===false)
 				return false
 			else {
-				D1=interval(P1,R)
-				D2=interval(P2,R)
 				R[0]=round(degrees(Math.atan(R[0]/90)))
+				D1=[R[0]-p1[0][0],R[1]-p1[0][1]]
+				D2=[R[0]-p2[0][0],R[1]-p2[0][1]]
 				R[1]=round(R[1]%360)
 			}
 			if (withDistance==false)
@@ -461,15 +462,18 @@ In case if the ortodrome crosspoints are equally spaced then the one with the sh
 <table>
 <tr>
 <th>Point #</th>
-<th>Distance, degrees</th>
+<th>Latitude Distance, <br>degrees</th>
+<th>Longitude Distance, <br>degrees</th>
 </tr>
 <tr>
 <td>1</td>
-<td><input val="" readonly data-point="1" data-distance-lox data-type="distance"></td>
+<td><input val="" readonly data-point="1" data-distance-lox data-type="distance-lat"></td>
+<td><input val="" readonly data-point="1" data-distance-lox data-type="distance-lng"></td>
 </tr>
 <tr>
 <td>2</td>
-<td><input val="" readonly data-point="2" data-distance-lox data-type="distance"></td>
+<td><input val="" readonly data-point="2" data-distance-lox data-type="distance-lat"></td>
+<td><input val="" readonly data-point="1" data-distance-lox data-type="distance-lng"></td>
 </tr>
 </table>
 </div>
@@ -519,8 +523,10 @@ In case if the ortodrome crosspoints are equally spaced then the one with the sh
 				$('.results.loxodrome').css({display:'block'})
 				$('[data-crosspoint-lox][data-type="lat"]').val(resultLox[0][0].toFixed(6))
 				$('[data-crosspoint-lox][data-type="lng"]').val(resultLox[0][1].toFixed(6))
-				$('[data-point="1"][data-distance-lox][data-type="distance"]').val(resultLox[1].toFixed(6))
-				$('[data-point="2"][data-distance-lox][data-type="distance"]').val(resultLox[2].toFixed(6))
+				$('[data-point="1"][data-distance-lox][data-type="distance-lat"]').val(resultLox[1][0].toFixed(6))
+				$('[data-point="2"][data-distance-lox][data-type="distance-lat"]').val(resultLox[2][0].toFixed(6))
+				$('[data-point="1"][data-distance-lox][data-type="distance-lng"]').val(resultLox[1][1].toFixed(6))
+				$('[data-point="2"][data-distance-lox][data-type="distance-lng"]').val(resultLox[2][1].toFixed(6))
 			}
 		}
 	}
