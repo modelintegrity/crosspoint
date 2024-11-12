@@ -1,3 +1,7 @@
+
+
+
+
 var Geo=(function() {
 
     var tol=0.0000000000001
@@ -308,13 +312,14 @@ var Geo=(function() {
 			var D1,D2
 			if (R===true) {
 				R=[90,0]
-				D1=D2=undefined
+				D1=[90-p1[0][0],NaN]
+				D2=[90-p2[0][0],NaN]
 			} else if (R===false)
 				return false
 			else {
-				D1=interval(P1,R)
-				D2=interval(P2,R)
 				R[0]=round(degrees(Math.atan(R[0]/90)))
+				D1=[R[0]-p1[0][0],R[1]-p1[0][1]]
+				D2=[R[0]-p2[0][0],R[1]-p2[0][1]]
 				R[1]=round(R[1]%360)
 			}
 			if (withDistance==false)
