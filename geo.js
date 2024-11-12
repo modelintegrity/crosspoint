@@ -120,92 +120,10 @@ var Geo=(function() {
         return r
 	}
 	
-	function rv(p) {
-		var lat=radians(p[0])
-        var lng=radians(p[1])
-        var cos=Math.cos(lat)
-        return [Math.cos(lng)*cos,Math.sin(lng)*cos,Math.sin(lat)]
-	}
-	
-	function geo(r) {
-        var lat=degrees(Math.asin(r[2])),lng
-        if (Math.abs(lat)==90)
-            lng=0
-        else {
-            var r_=UV([r[0],r[1],0])
-            lng=degrees(angle(r_[0],r_[1]))
-			if (lng==360)
-				lng=0
-		}
-		return [lat,lng]
-	}
-	
-	function distanceToCrossPoint(R,v) {
-		var d=angleDiff3d(R.point.radius,v)
-		if (interval(d[1],R.axis.radius)>1)
-			d[0]=Math.PI*2-d[0]
-		if (Math.abs(d[0]-Math.PI*2)<tol)
-			d[0]=0
-		return d[0]
-	}
-	
-	function checkPoint(p) {
-		var P
-		if (p instanceof Array)
-			P=new Point(p)
-		else
-			P=p[0]
-		return P
-	}
-	function checkRay(p) {
-		var R
-		if (p instanceof Array)
-			R=new Ray(p[0],p[1])
-		else
-			R=p
-		return R
-	}
-	
-	var Point = function(location,radius) {
-		if (location!=false) {
-			this.radius=rv(location)
-			this.location=location
-		} else if (radius!=false) {
-			this.radius=radius
-			this.location=geo(radius)			
-		}
-		this.locationRounded=[round(this.location[0]),round(this.location[1])]
-	}
-	
-	var Ray = function(p,a) {
-		this.point=checkPoint(p)
-		this.azimuth=a
-		this.axis = new Point(false,Ray.axis.call(this))
-	}
-	Ray.axis = function() {
-		var par,a,k=interval([this.point.radius[0],this.point.radius[1]])
-		if (k>tol) {
-            par=VP(this.point.radius,[0,0,1],true)
-			a=-this.azimuth
-        } else
-			if (this.point.radius[2]>0) {
-				par=[0,1,0]
-	            a=this.azimuth
-			} else {
-				par=[0,-1,0]
-	            a=-this.azimuth
-			}
-        return rotation3d(this.point.radius,par,radians(a))
-	}
-	Ray.prototype.travelRadias = function (d,p=false) { //travel angle in radians, from point as radius vector
-		return new Point(false,rotation3d(this.axis.radius,checkPoint(p)||this.point.radius,d))
-	}
-	Ray.prototype.travel = function (d,p=false) { // travel angle in degrees, from point as geolocation
-		return this.travelRadias(radians(d),p)
-	}
-	
 	function linesCrossingPoint2D(P1,V1,P2,V2) {
 		var vd=VD(P2,P1)
+		if (interval(P1,P2)==0)
+			return false
 		if (V1[0]!=0 && V2[0]!=0) {
 			g1=V1[1]/V1[0]
 			g2=V2[1]/V2[0]
@@ -236,6 +154,105 @@ var Geo=(function() {
 			return [P1[0],P2[1]]
 	}
 
+	function rv(p) {
+		var lat=radians(p[0])
+        var lng=radians(p[1])
+        var cos=Math.cos(lat)
+        return [Math.cos(lng)*cos,Math.sin(lng)*cos,Math.sin(lat)]
+	}
+	
+	function geo(r) {
+        var lat=degrees(Math.asin(r[2])),lng
+        if (Math.abs(lat)==90)
+            lng=0
+        else {
+            var r_=UV([r[0],r[1],0])
+            lng=degrees(angle(r_[0],r_[1]))
+			if (lng==360)
+				lng=0
+		}
+		return [lat,lng]
+	}
+	
+	function distanceToCrossPoint(R,v) {
+		var d=angleDiff3d(R.point.radius,v)
+		if (interval(d[1],R.axis.radius)>1)
+			d[0]=Math.PI*2-d[0]
+		if (Math.abs(d[0]-Math.PI*2)<tol)
+			d[0]=0
+		return d[0]
+	}
+	
+	var Point = function(location,radius) {
+		if (location!=false) {
+			this.radius=rv(location)
+			this.location=location
+		} else if (radius!=false) {
+			this.radius=radius
+			this.location=geo(radius)			
+		}
+		this.locationRad=[radians(this.location[0]),radians(this.location[1])]
+		this.locationRounded=[round(this.location[0]),round(this.location[1])]
+	}
+	Point.check = function(p) {
+		var P
+		if (p instanceof Array)
+			P=new Point(p)
+		else
+			P=p
+		return P
+	}
+	Point.fromMercator = function(R) {
+		P = new Point([round(degrees(Math.atan(R[0]/90))),round(R[1]%360)])
+		P.mercatorLocation=[R[0],R[1]] 
+		return P
+	}
+	Point.prototype.mercator=function(){
+		this.mercatorLocation=[Math.tan(this.locationRad[0])*90,this.location[1]]
+		return this
+	}
+	
+	var Ray = function(p,a) {
+		this.point=Point.check(p)
+		this.azimuth=a
+		this.azimuthRad=radians(a)
+	}
+	Ray.check =function(p) {
+		var R
+		if (p instanceof Array)
+			R=new Ray(p[0],p[1])
+		else
+			R=p
+		return R
+	}
+	Ray.prototype.mercator=function() {
+		this.mercatorVector=UV([Math.cos(this.azimuthRad)/Math.cos(this.point.locationRad[0])*Math.PI/2,Math.sin(this.azimuthRad)])
+		this.point.mercator()
+		return this
+	}
+	Ray.prototype.axis = function() {
+		var par,a,k=interval([this.point.radius[0],this.point.radius[1]])
+		if (k>tol) {
+            par=VP(this.point.radius,[0,0,1],true)
+			a=-this.azimuthRad
+        } else
+			if (this.point.radius[2]>0) {
+				par=[0,1,0]
+	            a=this.azimuthRad
+			} else {
+				par=[0,-1,0]
+	            a=-this.azimuthRad
+			}
+		this.axis=new Point(false,rotation3d(this.point.radius,par,a))
+		return this
+	}
+	Ray.prototype.travelRadians = function (d,p=false) { //travel angle in radians, from point as radius vector
+		return new Point(false,rotation3d(this.axis.radius,Point.check(p)||this.point.radius,d))
+	}
+	Ray.prototype.travel = function (d,p=false) { // travel angle in degrees, from point as geolocation
+		return this.travelRadians(radians(d),p)
+	}
+	
 	return {
 		RadiusVector:rv,
 		Location:geo,
@@ -246,8 +263,8 @@ var Geo=(function() {
 		Point:Point,
 		SphericalTwoOrtodromesIntersectionPoint: function(p1,p2,withDistance=false) {    			
 			
-			var R1=checkRay(p1)
-			var R2=checkRay(p2)
+			var R1=Ray.check(p1).axis()
+			var R2=Ray.check(p2).axis()
 			
 			var v1=VP(R1.axis.radius,R2.axis.radius)
 			if (interval(v1)<tol)
@@ -275,8 +292,8 @@ var Geo=(function() {
 				return [result,[round(degrees(d11)),d11,R1],[round(degrees(d21)),d21,R2]]
 		},
 		DistanceTo: function(p1,p2,inDegrees=true,withRay=false) {
-			var r1=checkPoint(p1)
-			var r2=checkPoint(p2)
+			var r1=Point.check(p1)
+			var r2=Point.check(p2)
 			var r=angleDiff3d(r1.radius,r2.radius)
 			if (inDegrees==true)
 				r[0]=degrees(r[0])
@@ -297,36 +314,26 @@ var Geo=(function() {
 				return [r[0],ray]
 			} else
 				return r[0]
-
 		},
 		SphericalTwoLoxodromesIntersectionPoint: function (p1,p2,withDistance=false) {
-			var r1=radians(p1[0][0])
-			var r2=radians(p2[0][0])
-			var rr1=radians(p1[1])
-			var rr2=radians(p2[1])
-			var V1=UV([Math.cos(rr1)/Math.cos(r1)*Math.PI/2,Math.sin(rr1)])
-			var V2=UV([Math.cos(rr2)/Math.cos(r2)*Math.PI/2,Math.sin(rr2)])
-			var P1=[Math.tan(r1)*90,p1[0][1]]
-			var P2=[Math.tan(r2)*90,p2[0][1]]
-			var R=linesCrossingPoint2D(P1,V1,P2,V2)
-			var D1,D2
-			if (R===true) {
-				R=[90,0]
-				D1=[90-p1[0][0],NaN]
-				D2=[90-p2[0][0],NaN]
-			} else if (R===false)
+			var R1=Ray.check(p1).mercator()
+			var R2=Ray.check(p2).mercator()
+			var R=linesCrossingPoint2D(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector)
+			if (R===false)
 				return false
-			else {
-				R[0]=round(degrees(Math.atan(R[0]/90)))
-				D1=[R[0]-p1[0][0],R[1]-p1[0][1]]
-				D2=[R[0]-p2[0][0],R[1]-p2[0][1]]
-				R[1]=round(R[1]%360)
+			if (R===true) {
+				R=new Point([90,0])
+				R.mercatorLocation=[NaN,NaN]
+			} else {
+				R=Point.fromMercator(R)
 			}
 			if (withDistance==false)
 				return R
-			else
+			else {
+				var D1=[R.location[0]-R1.point.location[0],R.mercatorLocation[1]-R1.point.mercatorLocation[1],interval(R.mercatorLocation,R1.point.mercatorLocation)]
+				var D2=[R.location[0]-R2.point.location[0],R.mercatorLocation[1]-R2.point.mercatorLocation[1],interval(R.mercatorLocation,R2.point.mercatorLocation)]
 				return [R,D1,D2]
-			
+			}
 		}
 	}
 })()
