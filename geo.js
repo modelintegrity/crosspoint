@@ -112,7 +112,24 @@ var Geo=(function() {
             return r
 	}
 	
-    function VD(V1,V2) {
+    function VA(V1,V2=false){
+        var V
+		if (V2)
+            V=[V1,V2]
+        else
+            V=[V1]
+        var p=V.length
+        var l=V[0].length
+        var r=[]
+        for (var i=0;i<l;i++) {
+			r.push(0)
+			for (var j=0;j<p;j++)
+				r[i]+=V[j][i]/p
+		}
+        return r
+	}
+	
+	function VD(V1,V2) {
         var l=V1.length
         var r=[]
         for (var i=0;i<l;i++)
@@ -120,58 +137,67 @@ var Geo=(function() {
         return r
 	}
 	
-	function linesCrossingPoint2D(P1,V1,P2,V2,isRay=false) { //exceptions: null - points are on the same line (rays overlaps) (infinite number of crosspoints), true - lines parallel and not in the same line (rays look in same direction), false - rays do not intersect
-		var vd=VD(P2,P1),I=interval(P1,P2),R
-		if (I==0)
-			R=P1
-		if (V1[0]!=0 && V2[0]!=0) {
-			g1=V1[1]/V1[0]
-			g2=V2[1]/V2[0]
-			g=g1-g2
-			if (g==0)
-				if (vd[0]==0 || vd[1]/vd[0]!=g1)
-					if (isRay==true && interval(V1,V2)>1)
-						return false
-					else
-						return true
-				else
-					if (isRay==true && interval(V2,V1)>1 && interval(UV(vd),V1)>1)
-						return false
-					else
-						return null
-			P11=P1[1]+g1*(P2[0]-P1[0])
-			dx=(P2[1]-P11)/g
-			R=[P2[0]+dx,P2[1]+g2*dx]
-		} else if (V1[1]!=0 && V2[1]!=0) {
-			g1=V1[0]/V1[1]
-			g2=V2[0]/V2[1]
-			g=g1-g2
-			if (g==0)
-				if (vd[1]==0 || vd[0]/vd[1]!=g1)
-					if (isRay==isRay && interval(V1,V2)>1)
-						return false
-					else
-						return true
-				else
-					if (isRay==true && interval(V2,V1)>1 && interval(UV(vd),V1)>1)
-						return false
-					else
-						return null
-			P10=P1[0]+g1*(P2[1]-P1[1])
-			dy=(P2[0]-P10)/g
-			R=[P2[0]+g2*dy,P2[1]+dy]
-		} else if (V1[0]!=0)
-			R=[P2[0],P1[1]]
-		else
-			R=[P1[0],P2[1]]
-		if (isRay===false || 
-			interval(UV(vd),V1)<tol || 
-			interval(UV(VD(P1,P2)),V2)<tol || 
-			interval(translate(V1,tol,P1),translate(V2,tol,P2))<I || 
-			interval(translate(V1,tol*10,P1),translate(V2,tol*10,P2))<I)
-			return R
-		else
+	function linesCrossingPoint2D(P1,V1_,P2,V2_,isRay=false,middlePointFallback=false) { //exceptions: null - points are on the same line (rays overlaps) - an infinite number of crosspoints, true - lines are parallel and not in the same line (rays look in same direction) - the crosspoint somewhere in the infinity, false - rays do not intersect or vectors are invalid
+		if (interval(P1,P2)<tol)
+			return VA(P1,P2)
+		if (interval(V1_)==0 || interval(V2_)==0)
 			return false
+		var V1,V2
+		if (!isRay) {
+			V1=V1_
+			V2=V2_
+		} else {
+			V1=UV(V1_)
+			V2=UV(V2_)
+		}
+		var a1=-V1[1]
+		var b1=V1[0]
+		var a2=-V2[1]
+		var b2=V2[0]
+		var c1,c2
+		if (Math.abs(a1)<Math.abs(b1))
+			c1=-P1[0]*a1-P1[1]*b1
+		else
+			c1=-P1[1]*b1-P1[0]*a1
+		if (Math.abs(a2)<Math.abs(b2))
+			c2=-P2[0]*a2-P2[1]*b2
+		else
+			c2=-P2[1]*b2-P2[0]*a2
+		var dem=a1*b2-a2*b1
+		var x=b1*c2-b2*c1
+		var y=a2*c1-a1*c2
+		if (Math.abs(dem)>tol) {
+			var R=[x/dem,y/dem]
+			if (!isRay || (interval(UV(VD(R,P1)),V1)<1 && interval(UV(VD(R,P2)),V2)<1))
+				return R
+			else
+				return false
+		} else if (Math.abs(x)<tol && Math.abs(y)<tol)
+			if (!isRay)
+				if (middlePointFallback)
+					return VA(P1,P2)
+				else
+					return null
+			else {
+				var int2=interval(UV(VD(P1,P2)),V2)
+				var int1=interval(UV(VD(P2,P1)),V1)
+				if (int2>1 && int1>1)
+					return false
+				else if (middlePointFallback)
+					if (int1>1)
+						return P1
+					else if (int2>1)
+						return P2
+					else
+						return VA(P1,P2)
+				else
+					return null
+			}
+		else 
+			if (!isRay || interval(V1,V2)<1)
+				return true
+			else 
+				return false
 	}
 
 	function rv(p) {
@@ -206,7 +232,9 @@ var Geo=(function() {
 	var Point = function(location,radius) {
 		if (location!=false) {
 			this.radius=rv(location)
-			this.location=location
+			this.location=[location[0],location[1]%360]
+			if (this.location[1]<0)
+				this.location[1]+=360
 		} else if (radius!=false) {
 			this.radius=radius
 			this.location=geo(radius)			
@@ -289,18 +317,30 @@ var Geo=(function() {
 			var R1=Ray.check(p1).axis()
 			var R2=Ray.check(p2).axis()
 			
-			var v1=VP(R1.axis.radius,R2.axis.radius)
-			if (interval(v1)<tol)
-				return false
-			v1=UV(v1)
-			
-			var v2=translate(v1,-1)
-			
+			var v1=VP(R1.axis.radius,R2.axis.radius),v2
+				
+			if (interval(v1)<tol) {
+				if (interval(R1.axis.radius,R2.axis.radius)<1) {
+					v1=R1.point.radius
+					v2=R2.point.radius
+				} else {
+					v1=VA(R1.point.radius,R2.point.radius)
+					if (interval(v1)>tol)
+						v1=UV(v1)
+					else
+						v1=VA(VP(R1.point.radius,R1.axis.radius),VP(R2.point.radius,R2.axis.radius))
+				}
+			} else
+				v1=UV(v1)
+		
+			if (!v2)
+				v2=translate(v1,-1)
+							
 			var d11=distanceToCrossPoint(R1,v1)
 			var d12=distanceToCrossPoint(R1,v2)
 			var d21=distanceToCrossPoint(R2,v1)
 			var d22=distanceToCrossPoint(R2,v2)
-			
+				
 			if (d11+d21-d12-d22>tol || (Math.abs(d11+d21-d12-d22)<tol && d11-d12>tol)) {
 				v1=v2
 				d11=d12
@@ -345,39 +385,58 @@ var Geo=(function() {
 			
 			var R1=Ray.check(p1).mercator()
 			var R2=Ray.check(p2).mercator()
+			var shift=0
+			R2.point.mercatorLocation[1]+=shift
+			var P=linesCrossingPoint2D(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true,true)
+			if (P===false) {
+				R2.point.mercatorLocation[1]-=shift
+				shift=360
+				R2.point.mercatorLocation[1]+=shift
+				P=linesCrossingPoint2D(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true,true)
+				if (P===false) {
+					R2.point.mercatorLocation[1]-=shift
+					shift=-360
+					R2.point.mercatorLocation[1]+=shift
+					P=linesCrossingPoint2D(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true,true)
+					if (P===false)
+						return false
+				}
+			}
 			
-			var P=linesCrossingPoint2D(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true)
-			
-			if (P===null || P===false)
-				return false
 			if (P===true) {
 				P=new Point([R1.mercatorVector[0]>0?90:-90,0])
 				P.mercatorLocation=[NaN,NaN]
 			} else
 				P=Point.fromMercator(P)
 			
-			if (withDistance==false)
+			if (!withDistance)
 				return P
 			else {
-				var i1,i2
-				var latdiff1=Math.abs(P.locationRad[0]-R1.point.locationRad[0])
-				var cos1=Math.abs(Math.cos(R1.azimuthRad))
-				if ((Math.abs(P.location)==90 && cos1>tol) || (latdiff1>tol*Math.max(1,Math.pow(cos1,4)*10000000000) && cos1>tol*Math.max(1,Math.tan(Math.min(Math.PI/4,latdiff1))*10000000000)))
-					i1=latdiff1/cos1
-				else if (Math.abs(P.location)==90)
-					i1=NaN
-				else
-					i1=Math.abs((P.locationRad[1]-R1.point.locationRad[1])/Math.sin(R1.azimuthRad)*Math.cos((P.locationRad[0]+R1.point.locationRad[0])/2))
-				var latdiff2=Math.abs(P.locationRad[0]-R2.point.locationRad[0])
-				var cos2=Math.abs(Math.cos(R2.azimuthRad))
-				if ((Math.abs(P.location)==90 && cos2>tol) || (latdiff2>tol*Math.max(1,Math.pow(cos1,4)*10000000000) && cos2>tol*Math.max(1,Math.tan(Math.min(Math.PI/4,latdiff2))*10000000000)))
-					i2=latdiff2/cos2
-				else if (Math.abs(P.location)==90)
-					i2=NaN
-				else
-					i2=Math.abs((P.locationRad[1]-R2.point.locationRad[1])/Math.sin(R2.azimuthRad)*Math.cos((P.locationRad[0]+R2.point.locationRad[0])/2))
-				var D1=[degrees(i1),Math.abs(R1.mercatorVector[1])<tol?0:P.mercatorLocation[1]-R1.point.mercatorLocation[1]]
-				var D2=[degrees(i2),Math.abs(R2.mercatorVector[1])<tol?0:P.mercatorLocation[1]-R2.point.mercatorLocation[1]]
+				var i1=interval(P.locationRad,R1.point.locationRad)
+				if (i1>tol){
+					var latdiff1=Math.abs(P.locationRad[0]-R1.point.locationRad[0])
+					var cos1=Math.abs(Math.cos(R1.azimuthRad))
+					if ((Math.abs(P.location[0])==90 && cos1>tol) || (latdiff1>0.05 && cos1>0.05))
+						i1=latdiff1/cos1
+					else if (Math.abs(P.location[0])==90)
+						i1=NaN
+					else
+						i1=Math.abs((P.locationRad[1]-R1.point.locationRad[1])/Math.sin(R1.azimuthRad)*Math.cos((P.locationRad[0]+R1.point.locationRad[0])/2))
+				}
+				var i2=interval(P.locationRad,R2.point.locationRad)
+				if (i2>tol){
+					var latdiff2=Math.abs(P.locationRad[0]-R2.point.locationRad[0])
+					var cos2=Math.abs(Math.cos(R2.azimuthRad))
+					if ((Math.abs(P.location[0])==90 && cos2>tol) || (latdiff2>0.05 && cos2>0.05))
+						i2=latdiff2/cos2
+					else if (Math.abs(P.location[0])==90)
+						i2=NaN
+					else
+						i2=Math.abs((P.locationRad[1]-R2.point.locationRad[1])/Math.sin(R2.azimuthRad)*Math.cos((P.locationRad[0]+R2.point.locationRad[0])/2))
+				}
+				var D1=[round(degrees(i1)),Math.abs(R1.mercatorVector[1])<tol?0:P.mercatorLocation[1]-R1.point.mercatorLocation[1]]
+				var D2=[round(degrees(i2)),Math.abs(R2.mercatorVector[1])<tol?0:P.mercatorLocation[1]-R2.point.mercatorLocation[1]]
+				R2.point.mercatorLocation[1]-=shift
 				return [P,[D1,R1],[D2,R2]]
 			}
 		}
