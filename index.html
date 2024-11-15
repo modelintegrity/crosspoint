@@ -224,7 +224,7 @@ var Geo=(function() {
 		if (i>tol || Math.abs(P.location[0])-90<tol) {
 			var cos=Math.abs(Math.cos(R.azimuthRad))
 			if (cos<tol) 
-				i=Math.abs(P.mercatorLocation[1]-R.point.mercatorLocation[1]/Math.sin(R.azimuthRad)*Math.cos((P.locationRad[0]+R.point.locationRad[0])/2))
+				i=Math.abs((P.mercatorLocation[1]-R.point.mercatorLocation[1])/Math.sin(R.azimuthRad)*Math.cos((P.locationRad[0]+R.point.locationRad[0])/2))
 			else 
 				i=Math.abs(P.location[0]-R.point.location[0])/cos
 		} else 
