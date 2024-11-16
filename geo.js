@@ -133,27 +133,67 @@ var Geo=(function() {
         return r
 	}
 	
-	function linesCrossingPoint2D(P1,V1_,P2,V2_,isRay1=false,isRay2=false,middlePointFallback=false,i1=1,i2=1) { //exceptions: true - points are on the same line (rays overlaps) - an infinite number of crosspoints, null - lines are parallel and not in the same line (rays look in same direction) - the crosspoint somewhere in the infinity, false - rays do not intersect or vectors are invalid
+	function linesCrossingPoint2DSave(P1,V1_,P2,V2_,isRay1=false,isRay2=false,middlePointFallback=false) { //exceptions: true - points are on the same line (rays overlaps) - an infinite number of crosspoints, null - lines are parallel and not in the same line (rays look in same direction) - the crosspoint somewhere in the infinity, false - rays do not intersect or vectors are invalid
 
-		if (!isRay1)
-			V1=[V1_[0],V1_[1]]
-		else
+		if (interval(P1,P2)<tol) // same normal points, automatically returns the middle
+			return VA(P1,P2)
+		
+		if ((isNaN(P1[0]) && isNaN(P1[1])) || (isNaN(P2[0]) && isNaN(P2[1]))) // no sufficient data for one of points
+			return undefined
+		
+		if ((isNaN(P1[0]) && V1_[1]>tol) || (isNaN(P1[1]) && V1_[0]>tol) || (isNaN(P2[0]) && V2_[1]>tol) || (isNaN(P2[1]) && V2_[0]>tol)) // uncertainty of lines definition
+			return undefined
+
+		var i1=interval(V1_)
+		var i2=interval(V2_)
+		var V1,V2
+		
+		if (i1<0) {
+			V1=[0,0]
+			isRay1=true
+			//fallback for vector
+			if (isNaN(P1[0])) {
+				isRay1=false
+				V1[0]=i1=1
+			} else if (isNaN(P1[1])) {
+				isRay1=false
+				V1[1]=i1=1
+			}	
+		} else if (isRay1)
 			V1=UV(V1_)
-
-		if (!isRay1)
-			V2=[V2_[0],V2_[1]]
 		else
+			V1=V1_
+		
+		if (i2<0) {
+			V2=[0,0]
+			isRay2=true
+			//fallback for vector
+			if (isNaN(P2[0])) {
+				isRay2=false
+				V2[0]=i2=1
+			} else if (isNaN(P2[1])) {
+				isRay2=false
+				V2[1]=i2=1
+			}					
+		} else if (isRay2)
 			V2=UV(V2_)
+		else
+			V2=V2_
+		
+		if (i1<tol && i2<tol) // not same points but same time no vectors to search for each other
+			return false
+		
+		return linesCrossingPoint2D(P1,V1,P2,V2,isRay1,isRay2,middlePointFallback,i1,i2) 
+	}
+
+	function linesCrossingPoint2D(P1,V1,P2,V2,isRay1=false,isRay2=false,middlePointFallback=false,i1=1,i2=1) { //exceptions: true - points are on the same line (rays overlaps) - an infinite number of crosspoints, null - lines are parallel and not in the same line (rays look in same direction) - the crosspoint somewhere in the infinity, false - rays do not intersect or vectors are invalid
 		
 		var d,x,y
 		
 		if (i1>tol && i2>tol) {
-			
-			d=V2[1]*V1[0]-V1[1]*V2[0]
-			
 			var	c1=(isNaN(P1[0])?0:P1[0])*V1[1]-(isNaN(P1[1])?0:P1[1])*V1[0]
 			var	c2=(isNaN(P2[0])?0:P2[0])*V2[1]-(isNaN(P2[1])?0:P2[1])*V2[0]
-			
+			d=V2[1]*V1[0]-V1[1]*V2[0]
 			x=V1[0]*c2-V2[0]*c1
 			y=V1[1]*c2-V2[1]*c1
 		} else
@@ -200,55 +240,6 @@ var Geo=(function() {
 				return false
 	}
 	
-	function linesCrossingPoint2DSave(P1,V1_,P2,V2_,isRay1=false,isRay2=false,middlePointFallback=false) { //exceptions: true - points are on the same line (rays overlaps) - an infinite number of crosspoints, null - lines are parallel and not in the same line (rays look in same direction) - the crosspoint somewhere in the infinity, false - rays do not intersect or vectors are invalid
-
-		if (interval(P1,P2)<tol) // same normal points, automatically returns the middle
-			return VA(P1,P2)
-		
-		if ((isNaN(P1[0]) && isNaN(P1[1])) || (isNaN(P2[0]) && isNaN(P2[1]))) // no sufficient data for one of points
-			return undefined
-		
-		if ((isNaN(P1[0]) && V1_[1]>tol) || (isNaN(P1[1]) && V1_[0]>tol) || (isNaN(P2[0]) && V2_[1]>tol) || (isNaN(P2[1]) && V2_[0]>tol)) // uncertainty of lines definition
-			return undefined
-
-		var i1=interval(V1_)
-		var i2=interval(V2_)
-		var V1,V2
-		
-		if (i1<0) {
-			V1=[0,0]
-			isRay1=true
-			//fallback for vector
-			if (isNaN(P1[0])) {
-				isRay1=false
-				V1[0]=i1=1
-			} else if (isNaN(P1[1])) {
-				isRay1=false
-				V1[1]=i1=1
-			}	
-		} else
-			V1=V1_
-	
-		if (i2<0) {
-			V2=[0,0]
-			isRay2=true
-			//fallback for vector
-			if (isNaN(P2[0])) {
-				isRay2=false
-				V2[0]=i2=1
-			} else if (isNaN(P2[1])) {
-				isRay2=false
-				V2[1]=i2=1
-			}					
-		} else
-			V2=V2_
-		
-		if (i1<tol && i2<tol) // not same points but same time no vectors to search for each other
-			return false
-		
-		return linesCrossingPoint2D(P1,V1,P2,V2,isRay1,isRay2,middlePointFallback,i1,i2) 
-	}
-
 	function rv(p) {
 		var lat=radians(p[0])
         var lng=radians(p[1])
@@ -473,16 +464,16 @@ var Geo=(function() {
 			if (interval(R1.point.radius,R2.point.radius)<tol) // same points catch
 				P=new Point(UV(VA(R1.point.radius,R2.point.radius)))
 			else {
-				var P=linesCrossingPoint2D(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true,true,true)
+				var P=linesCrossingPoint2DSave(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true,true,true)
 				if (P===false) { //the first attempt is not sucessfull
 					shift=360 
 					R2.point.mercatorLocation[1]+=shift //thus shifting the second point one loop forward and repeating
-					P=linesCrossingPoint2D(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true,true,true)
+					P=linesCrossingPoint2DSave(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true,true,true)
 					if (P===false) { //the second attempt is not sucessfull
 						R2.point.mercatorLocation[1]-=shift
 						shift=-360
 						R2.point.mercatorLocation[1]+=shift //thus shifting the second point one loop backward and repeating
-						P=linesCrossingPoint2D(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true,true,true)
+						P=linesCrossingPoint2DSave(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true,true,true)
 					}
 				} else if (P===null) { // rays are parallel 
 					if (Math.abs(Math.cos(R1.azimuthRad))<tol) // and it turns out they are just two geographic parallels
