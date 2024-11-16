@@ -133,8 +133,28 @@ var Geo=(function() {
         return r
 	}
 	
+	function linesCrossingPoint2DSaveHelper1(V_,P,i,isRay) {
+		console.log(arguments)
+		var V
+		if (i<tol) {
+			V=[0,0]
+			isRay=true
+			//fallback for vector
+			if (isNaN(P[0])) {
+				isRay=false
+				V[0]=i=1
+			} else if (isNaN(P[1])) {
+				isRay=false
+				V[1]=i=1
+			}	
+		} else if (isRay)
+			V=UV(V_)
+		else
+			V=V_
+		return [V,i]
+	}
+	
 	function linesCrossingPoint2DSave(P1,V1_,P2,V2_,isRay1=false,isRay2=false,middlePointFallback=false) { //exceptions: true - points are on the same line (rays overlaps) - an infinite number of crosspoints, null - lines are parallel and not in the same line (rays look in same direction) - the crosspoint somewhere in the infinity, false - rays do not intersect or vectors are invalid
-
 		if (interval(P1,P2)<tol) // same normal points, automatically returns the middle
 			return VA(P1,P2)
 		
@@ -144,39 +164,9 @@ var Geo=(function() {
 		var i1=interval(V1_)
 		var i2=interval(V2_)
 		var V1,V2
-		
-		if (i1<0) {
-			V1=[0,0]
-			isRay1=true
-			//fallback for vector
-			if (isNaN(P1[0])) {
-				isRay1=false
-				V1[0]=i1=1
-			} else if (isNaN(P1[1])) {
-				isRay1=false
-				V1[1]=i1=1
-			}	
-		} else if (isRay1)
-			V1=UV(V1_)
-		else
-			V1=V1_
-		
-		if (i2<0) {
-			V2=[0,0]
-			isRay2=true
-			//fallback for vector
-			if (isNaN(P2[0])) {
-				isRay2=false
-				V2[0]=i2=1
-			} else if (isNaN(P2[1])) {
-				isRay2=false
-				V2[1]=i2=1
-			}					
-		} else if (isRay2)
-			V2=UV(V2_)
-		else
-			V2=V2_
-		
+		[V1,i1]=linesCrossingPoint2DSaveHelper1(V1_,P1,i1,isRay1);
+		[V2,i2]=linesCrossingPoint2DSaveHelper1(V2_,P2,i2,isRay2)
+				
 		if (i1<tol && i2<tol) // not same points but same time no vectors to search for each other
 			return false
 
