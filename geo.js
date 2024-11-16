@@ -141,9 +141,6 @@ var Geo=(function() {
 		if ((isNaN(P1[0]) && isNaN(P1[1])) || (isNaN(P2[0]) && isNaN(P2[1]))) // no sufficient data for one of points
 			return undefined
 		
-		if ((isNaN(P1[0]) && V1_[1]>tol) || (isNaN(P1[1]) && V1_[0]>tol) || (isNaN(P2[0]) && V2_[1]>tol) || (isNaN(P2[1]) && V2_[0]>tol)) // uncertainty of lines definition
-			return undefined
-
 		var i1=interval(V1_)
 		var i2=interval(V2_)
 		var V1,V2
@@ -182,7 +179,10 @@ var Geo=(function() {
 		
 		if (i1<tol && i2<tol) // not same points but same time no vectors to search for each other
 			return false
-		
+
+		if ((isNaN(P1[0]) && Math.abs(V1_[1])>tol) || (isNaN(P1[1]) && Math.abs(V1_[0])>tol) || (isNaN(P2[0]) && Math.abs(V2_[1])>tol) || (isNaN(P2[1]) && Math.abs(V2_[0])>tol)) // uncertainty of lines definition
+			return undefined
+			
 		return linesCrossingPoint2D(P1,V1,P2,V2,isRay1,isRay2,middlePointFallback,i1,i2) 
 	}
 
@@ -202,7 +202,7 @@ var Geo=(function() {
 		if (Math.abs(d)>tol) { // a real intersection of two separate lines is determined (a general case)
 			var R=[x/d,y/d]
 			if ((!isRay1 || interval(UV(VD(R,P1)),V1)<1 || interval(R,P1)<tol || isNaN(P1[0]) || isNaN(P1[1])) && 
-				(!isRay2 || interval(UV(VD(R,P2)),V2)<1) || interval(R,P2)<tol || isNaN(P2[0]) || isNaN(P2[1])) // no set lines direction or rays in a collision direction (general case)
+				(!isRay2 || interval(UV(VD(R,P2)),V2)<1 || interval(R,P2)<tol || isNaN(P2[0]) || isNaN(P2[1]))) // no set lines direction or rays in a collision direction (general case)
 				return R
 			else // rays are in avoidance directions, so actually there is no rays' intersection point
 				return false
@@ -213,7 +213,7 @@ var Geo=(function() {
 			var int2=interval(v12,V2)
 			var int1=interval(v21,V1)			
 					
-			if ((i1<tol && (interval(v12,UN(V2))>tol || interval(v21,UN(V2))>tol)) || (i2<tol && (interval(v21,UV(V1))>tol || interval(v12,UV(V1))>tol))) // the only availalabe line does not cross both points 
+			if ((i1<tol && (interval(v12,UV(V2))>tol || interval(v21,UV(V2))>tol)) || (i2<tol && (interval(v21,UV(V1))>tol || interval(v12,UV(V1))>tol))) // the only availalabe line does not cross both points 
 				return false
 			else if (int2>tol && int1>tol && isRay1 && isRay2) // opposite direction of rays with no overlapping, rays look opposite direction of other points
 				return false
