@@ -41,9 +41,10 @@ var Geo=(function() {
             vo=[vo_[0],vo_[1],vo_[2]]
             vr=[vr_[0],vr_[1],vr_[2]]
 		}
-        var r=VP(vo,vr,true,true)
-        var u=r[0]
-        var a=Math.asin(Math.max(-1,Math.min(r[1],1)))
+		var u,s=VP(vo,vr,true,true)
+		if (s==0)
+			u=VP(vo,[vo[2],vo[0]],vo[1]])
+        var a=Math.asin(Math.max(-1,Math.min(s,1)))
         var p=rotation3d(u,vo,a)
         if (interval(vr,p)>tol)
             a=Math.PI-a
@@ -138,8 +139,7 @@ var Geo=(function() {
         return r
 	}
 	
-	function linesCrossingPoint2DSaveHelper1(V_,P,i,isRay) {
-		console.log(arguments)
+	function linesCrossingPoint2DExtHelper1(V_,P,i,isRay) {
 		var V
 		if (i<tol) {
 			V=[0,0]
@@ -159,23 +159,21 @@ var Geo=(function() {
 		return [V,i]
 	}
 	
-	function linesCrossingPoint2DSave(P1,V1_,P2,V2_,isRay1=false,isRay2=false,middlePointFallback=false) { //exceptions: true - points are on the same line (rays overlaps) - an infinite number of crosspoints, null - lines are parallel and not in the same line (rays look in same direction) - the crosspoint somewhere in the infinity, false - rays do not intersect or vectors are invalid
+	function linesCrossingPoint2DExt(P1,V1_,P2,V2_,isRay1=false,isRay2=false,middlePointFallback=false) { //exceptions: true - points are on the same line (rays overlaps) - an infinite number of crosspoints, null - lines are parallel and not in the same line (rays look in same direction) - the crosspoint somewhere in the infinity, false - rays do not intersect or vectors are invalid
 		if (interval(P1,P2)<tol) // same normal points, automatically returns the middle
 			return VA(P1,P2)
 		
 		if ((isNaN(P1[0]) && isNaN(P1[1])) || (isNaN(P2[0]) && isNaN(P2[1]))) // no sufficient data for one of points
 			return undefined
 		
-		var i1=interval(V1_)
-		var i2=interval(V2_)
-		var V1,V2
-		[V1,i1]=linesCrossingPoint2DSaveHelper1(V1_,P1,i1,isRay1);
-		[V2,i2]=linesCrossingPoint2DSaveHelper1(V2_,P2,i2,isRay2)
+		var i1,i2,V1,V2
+		[V1,i1]=linesCrossingPoint2DExtHelper1(V1_,P1,interval(V1_),isRay1);
+		[V2,i2]=linesCrossingPoint2DExtHelper1(V2_,P2,interval(V1_),isRay2)
 				
 		if (i1<tol && i2<tol) // not same points but same time no vectors to search for each other
 			return false
 
-		if ((isNaN(P1[0]) && Math.abs(V1_[1])>tol) || (isNaN(P1[1]) && Math.abs(V1_[0])>tol) || (isNaN(P2[0]) && Math.abs(V2_[1])>tol) || (isNaN(P2[1]) && Math.abs(V2_[0])>tol)) // uncertainty of lines definition
+		if ((isNaN(P1[0]) && Math.abs(V1[1])>tol) || (isNaN(P1[1]) && Math.abs(V1[0])>tol) || (isNaN(P2[0]) && Math.abs(V2[1])>tol) || (isNaN(P2[1]) && Math.abs(V2[0])>tol)) // uncertainty of lines definition
 			return undefined
 			
 		return linesCrossingPoint2D(P1,V1,P2,V2,isRay1,isRay2,middlePointFallback,i1,i2) 
@@ -197,7 +195,7 @@ var Geo=(function() {
 		if (Math.abs(d)>tol) { // a real intersection of two separate lines is determined (a general case)
 			var R=[x/d,y/d]
 			if ((!isRay1 || interval(UV(VD(R,P1)),V1)<1 || interval(R,P1)<tol || isNaN(P1[0]) || isNaN(P1[1])) && 
-				(!isRay2 || interval(UV(VD(R,P2)),V2)<1 || interval(R,P2)<tol || isNaN(P2[0]) || isNaN(P2[1]))) // no set lines direction or rays in a collision direction (general case)
+				(!isRay2 || interval(UV(VD(R,P2)),V2)<1 || interval(R,P2)<tol || isNaN(P2[0]) || isNaN(P2[1]))) // no set lines direction or rays in a collision direction (a general case)
 				return R
 			else // rays are in avoidance directions, so actually there is no rays' intersection point
 				return false
@@ -210,7 +208,7 @@ var Geo=(function() {
 					
 			if ((i1<tol && (interval(v12,UV(V2))>tol || interval(v21,UV(V2))>tol)) || (i2<tol && (interval(v21,UV(V1))>tol || interval(v12,UV(V1))>tol))) // the only availalabe line does not cross both points 
 				return false
-			else if (int2>tol && int1>tol && isRay1 && isRay2) // opposite direction of rays with no overlapping, rays look opposite direction of other points
+			else if (int2>tol && int1>tol && isRay1 && isRay2) // opposite direction of rays with no overlapping, rays look opposite of other points direction
 				return false
 			else if ((isNaN(P1[0]) || isNaN(P1[1])) && !isNaN(P2[0]) && !isNaN(P2[1])) // condition to choose the only real point available
 				return (i2<tol || middlePointFallback)?P2:true
@@ -228,7 +226,7 @@ var Geo=(function() {
 				return P1
 			else   //should not reach there but if it does then no determined point
 				return true
-		} else // initial points are two separate parallel lines
+		} else // initial points are on two separate parallel lines
 			if (!isRay1 || !isRay2 || interval(V1,V2)<1) // no line direction or same rays direction 
 				return null
 			else // opposite rays direction
@@ -253,8 +251,8 @@ var Geo=(function() {
         } else {
             var r_=UV([r[0],r[1],0])
             lng=degrees(angle(r_[0],r_[1]))
-			if (lng==360)
-				lng=0
+			if (lng>180)
+				lng=-360+lng
 		}
 		return [lat,lng]
 	}
@@ -308,8 +306,8 @@ var Geo=(function() {
 		return P
 	}
 	Point.fromMercator = function(R) {
-		var lng=R[1]%360
-		if (lng<0)
+		var lng=(R[1]+180)%360-180
+		if (lng<-180)
 			lng+=360
 		P = new Point([degrees(Math.atan(R[0]/90)),lng])
 		P.mercatorLocation=[R[0],R[1]] 
@@ -459,28 +457,28 @@ var Geo=(function() {
 			if (interval(R1.point.radius,R2.point.radius)<tol) // same points catch
 				P=new Point(UV(VA(R1.point.radius,R2.point.radius)))
 			else {
-				var P=linesCrossingPoint2DSave(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true,true,true)
+				var P=linesCrossingPoint2DExt(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true,true,true)
 				if (P===false) { //the first attempt is not sucessfull
 					shift=360 
 					R2.point.mercatorLocation[1]+=shift //thus shifting the second point one loop forward and repeating
-					P=linesCrossingPoint2DSave(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true,true,true)
+					P=linesCrossingPoint2DExt(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true,true,true)
 					if (P===false) { //the second attempt is not sucessfull
 						R2.point.mercatorLocation[1]-=shift
 						shift=-360
 						R2.point.mercatorLocation[1]+=shift //thus shifting the second point one loop backward and repeating
-						P=linesCrossingPoint2DSave(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true,true,true)
+						P=linesCrossingPoint2DExt(R1.point.mercatorLocation,R1.mercatorVector,R2.point.mercatorLocation,R2.mercatorVector,true,true,true)
 					}
-				} else if (P===null) { // rays are parallel 
-					if (Math.abs(Math.cos(R1.azimuthRad))<tol) // and it turns out they are just two geographic parallels
+				} else if (P===null) { // rays are two parallels heading same direction
+					if (Math.abs(Math.cos(R1.azimuthRad))<tol) // and it turns out they are just two geographical parallels, thus not intersecting
 						return false
-					P=new Point([R1.mercatorVector[0]>0?90:-90,0]) // and reache a the same pole
-				} else if (P===undefined) // something is broken, should not be a case in the case
+					P=new Point([R1.mercatorVector[0]>0?90:-90,0]) // and reach a the same pole
+				} else if (P===undefined) // something goes wrong, but should not be a case in the case
 					return false
 					 
-				if (P===false || P===true) // true - if loxodromes launched from opposite poles towards the same longitide, false - if loxodromes launched from opposite poles towards different longitide, or there is no intersection at all  
-					if (Math.abs(Math.abs(R1.point.location[0])-90)<tol) // initial point is pole
+				if (P===false || P===true) // true - loxodromes launched from opposite poles towards the same longitide, false - loxodromes launched from opposite poles towards different longitide, or there is no intersection at all  
+					if (Math.abs(Math.abs(R1.point.location[0])-90)<tol) // the first initial point is  a pole
 						P=new Point(R1.point.location)
-					else if (Math.abs(Math.abs(R2.point.location[0])-90)<tol) // initial point is pole
+					else if (Math.abs(Math.abs(R2.point.location[0])-90)<tol) // the second initial point is a pole
 						P=new Point(R2.point.location)
 					else
 						return false // rays do not intersect
@@ -491,7 +489,7 @@ var Geo=(function() {
 			else				
 				P.mercator()
 			
-			if (Math.abs(Math.abs(P.location[0])-90)<tol) // no sense of longitude path.
+			if (Math.abs(Math.abs(P.location[0])-90)<tol) // cross point is a pokem, so no sense of longitude path as it makes infinite number of loop reaching the pole.
 				P.mercatorLocation[1]=NaN
 				
 			if (!withDistance)
@@ -505,7 +503,6 @@ var Geo=(function() {
 		}
 	}
 })()
-
 </script>
 <script src="https://code.jquery.com/jquery-2.2.4.min.js" crossorigin="anonymous"></script>
 <style>
