@@ -36,7 +36,8 @@ var Geo=(function() {
             vo=[vo_[0],vo_[1],vo_[2]]
             vr=[vr_[0],vr_[1],vr_[2]]
 		}
-		var u,s=VP(vo,vr,true,true)
+		var u,s
+		[u,s]=VP(vo,vr,true,true)
 		if (s==0)
 			u=VP(vo,[vo[2],vo[0],vo[1]],true)
         var a=Math.asin(Math.max(-1,Math.min(s,1)))
