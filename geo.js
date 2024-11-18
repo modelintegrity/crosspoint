@@ -38,7 +38,7 @@ var Geo=(function() {
 		}
 		var u,s=VP(vo,vr,true,true)
 		if (s==0)
-			u=VP(vo,[vo[2],vo[0]],vo[1]],true)
+			u=VP(vo,[vo[2],vo[0],vo[1]],true)
         var a=Math.asin(Math.max(-1,Math.min(s,1)))
         var p=rotation3d(u,vo,a)
         if (interval(vr,p)>tol)
@@ -114,7 +114,7 @@ var Geo=(function() {
 		if (V2)
             V=[V1,V2]
         else
-            V=[V1]
+            V=V1
         var p=V.length
         var l=V[0].length
         var r=[]
