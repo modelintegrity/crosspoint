@@ -3,4 +3,4 @@ Demo: http://modelintegrity.github.io/crosspoint/
 
 GNU General Public License.
 This code as it is can be used, distributed and changed without a limit and on full resposibility of a user.
-No garanties, and no liabilities  are provided.
+No guaranties, and no liabilities are provided.
